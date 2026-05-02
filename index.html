@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Employee & Project Dashboard</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div id="app">
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-top">
+        <button id="toggleSidebarBtn" class="btn">☰</button>
+        <h1>Dashboard</h1>
+      </div>
+      <div class="period-box">
+        <label>
+          Month
+          <select id="monthSelect"></select>
+        </label>
+        <label>
+          Year
+          <select id="yearSelect"></select>
+        </label>
+      </div>
+      <button id="seedDataBtn" class="btn btn-primary">Seed Data</button>
+      <nav class="tabs">
+        <button id="projectsTabBtn" class="tab active">Projects</button>
+        <button id="employeesTabBtn" class="tab">Employees</button>
+      </nav>
+    </aside>
+
+    <button id="openSidebarBtn" class="open-sidebar hidden">→</button>
+
+    <main class="content">
+      <header class="topbar">
+        <h2 id="viewTitle">Projects</h2>
+        <div class="actions">
+          <button id="addProjectBtn" class="btn btn-primary">Add Project</button>
+          <button id="addEmployeeBtn" class="btn btn-primary">Add Employee</button>
+        </div>
+      </header>
+
+      <section id="filterChips" class="filter-chips"></section>
+      <section id="tableContainer"></section>
+    </main>
+  </div>
+
+  <div id="overlayRoot"></div>
+
+  <script src="./app.js"></script>
+</body>
+</html>

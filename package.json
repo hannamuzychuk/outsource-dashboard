@@ -1,0 +1,9 @@
+{
+    "name": "employee-project-dashboard",
+    "version": "1.0.0",
+    "private": true,
+    "description": "Vanilla JS employee and project dashboard",
+    "scripts": {
+      "start": "python3 -m http.server 8080"
+    }
+  }
