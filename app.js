@@ -38,6 +38,14 @@ const money = (v) => `$${Number(v || 0).toFixed(2)}`;
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 const asNum = (v, d = 0) => Number(Number(v).toFixed(d));
 
+/** Clicks on button label text use TextNode as target — Text has no .closest(). */
+function clickTargetElement(e) {
+  const t = e.target;
+  if (t instanceof Element) return t;
+  if (t && t.nodeType === Node.TEXT_NODE && t.parentElement) return t.parentElement;
+  return null;
+}
+
 function save() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state.monthlyData));
 }
@@ -596,7 +604,7 @@ function openProjectEmployees(projectId) {
     const rev = eff * revPerEff;
     const cost = emp.salary * Math.max(0.5, a.capacity);
     return `<tr>
-      <td><button class="link-btn" data-action="openEmployeeMenu" data-eid="${emp.id}" data-pid="${projectId}">${emp.name} ${emp.surname}</button></td>
+      <td><button class="link-btn" data-local-action="openEmployeeMenu" data-eid="${emp.id}" data-pid="${projectId}">${emp.name} ${emp.surname}</button></td>
       <td>${a.capacity.toFixed(2)}</td>
       <td>${a.fit.toFixed(2)}</td>
       <td>${(emp.vacationDays || []).length}</td>
@@ -604,21 +612,37 @@ function openProjectEmployees(projectId) {
       <td class="money">${money(rev)}</td>
       <td class="money">${money(cost)}</td>
       <td class="${rev - cost >= 0 ? "ok" : "bad"} money">${money(rev - cost)}</td>
-      <td><button class="btn" data-action="editAssignmentFromProject" data-eid="${emp.id}" data-pid="${projectId}">Edit</button>
-      <button class="btn" data-action="unassign" data-eid="${emp.id}" data-pid="${projectId}" data-from="projectDetails" data-from-id="${projectId}">Unassign</button></td>
+      <td><button class="btn" data-local-action="editAssignmentFromProject" data-eid="${emp.id}" data-pid="${projectId}">Edit</button>
+      <button class="btn" data-local-action="unassignFromProjectDetails" data-eid="${emp.id}" data-pid="${projectId}" data-from-id="${projectId}">Unassign</button></td>
     </tr>`;
   }).join("");
   showModal(`
     <h3>${p.projectName} - Employees</h3>
     ${assigned.length ? `<table><thead><tr><th>Name</th><th>Cap</th><th>Fit</th><th>Vacation</th><th>Eff</th><th>Revenue</th><th>Cost</th><th>Profit</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table>` : "<p>No employees assigned.</p>"}
-  `);
+  `, (root) => {
+    root.querySelectorAll("[data-local-action]").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const action = btn.dataset.localAction;
+        if (action === "openEmployeeMenu") {
+          openActionMenu(btn, [
+            { label: "See at Employees", action: "seeAtEmployee", eid: btn.dataset.eid },
+            { label: "Unassign", action: "unassign", eid: btn.dataset.eid, pid: btn.dataset.pid }
+          ]);
+        }
+        if (action === "editAssignmentFromProject") openAssignModal(btn.dataset.eid, btn.dataset.pid, btn);
+        if (action === "unassignFromProjectDetails") unassign(btn.dataset.eid, btn.dataset.pid, { from: "projectDetails", id: btn.dataset.fromId });
+      });
+    });
+  });
 }
 
 function openEmployeeAssignments(employeeId) {
   const { employees, projects } = getCurrent();
   const emp = employees.find((e) => e.id === employeeId);
   const rows = employeeAssignmentRows(emp, projects, employees).map((x) => `<tr>
-    <td><button class="link-btn" data-action="openProjectMenu" data-pid="${x.project.id}" data-eid="${emp.id}">${x.project.projectName}</button></td>
+    <td><button class="link-btn" data-local-action="openProjectMenu" data-pid="${x.project.id}" data-eid="${emp.id}">${x.project.projectName}</button></td>
     <td>${x.assignment.capacity.toFixed(2)}</td>
     <td>${x.assignment.fit.toFixed(2)}</td>
     <td>${(emp.vacationDays || []).length}</td>
@@ -626,13 +650,29 @@ function openEmployeeAssignments(employeeId) {
     <td class="money">${money(x.revenue)}</td>
     <td class="money">${money(x.cost)}</td>
     <td class="${x.profit >= 0 ? "ok" : "bad"} money">${money(x.profit)}</td>
-    <td><button class="btn" data-action="editAssignmentFromEmployee" data-eid="${emp.id}" data-pid="${x.project.id}">Edit</button>
-    <button class="btn" data-action="unassign" data-eid="${emp.id}" data-pid="${x.project.id}" data-from="employeeDetails" data-from-id="${emp.id}">Unassign</button></td>
+    <td><button class="btn" data-local-action="editAssignmentFromEmployee" data-eid="${emp.id}" data-pid="${x.project.id}">Edit</button>
+    <button class="btn" data-local-action="unassignFromEmployeeDetails" data-eid="${emp.id}" data-pid="${x.project.id}" data-from-id="${emp.id}">Unassign</button></td>
   </tr>`).join("");
   showModal(`
     <h3>${emp.name} ${emp.surname} - Assignments</h3>
     ${emp.assignments.length ? `<table><thead><tr><th>Project</th><th>Cap</th><th>Fit</th><th>Vacation</th><th>Eff</th><th>Revenue</th><th>Cost</th><th>Profit</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table>` : "<p>No assignments.</p>"}
-  `);
+  `, (root) => {
+    root.querySelectorAll("[data-local-action]").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const action = btn.dataset.localAction;
+        if (action === "openProjectMenu") {
+          openActionMenu(btn, [
+            { label: "See at Projects", action: "seeAtProject", pid: btn.dataset.pid },
+            { label: "Unassign", action: "unassign", eid: btn.dataset.eid, pid: btn.dataset.pid }
+          ]);
+        }
+        if (action === "editAssignmentFromEmployee") openAssignModal(btn.dataset.eid, btn.dataset.pid, btn);
+        if (action === "unassignFromEmployeeDetails") unassign(btn.dataset.eid, btn.dataset.pid, { from: "employeeDetails", id: btn.dataset.fromId });
+      });
+    });
+  });
 }
 
 function openVacationCalendar(employeeId) {
@@ -808,7 +848,9 @@ function wireEvents() {
   el.seedDataBtn.onclick = openSeedDataModal;
 
   document.body.addEventListener("click", (e) => {
-    const btn = e.target.closest("[data-action]");
+    const from = clickTargetElement(e);
+    if (!from) return;
+    const btn = from.closest("[data-action]");
     if (!btn) return;
     const a = btn.dataset.action;
     const id = btn.dataset.id;
@@ -977,8 +1019,10 @@ function wireEvents() {
     render();
   });
   document.body.addEventListener("click", (e) => {
-    const inPopup = e.target.closest(".filter-popup");
-    const isFilterButton = e.target.closest('[data-action="filter"]');
+    const from = clickTargetElement(e);
+    if (!from) return;
+    const inPopup = from.closest(".filter-popup");
+    const isFilterButton = from.closest('[data-action="filter"]');
     if (!inPopup && !isFilterButton) closeOverlayMenus();
   });
 }
